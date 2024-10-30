@@ -57,108 +57,56 @@ def determine_continuum(flux, method='running_average', window_size=50, threshol
 
     return continuum
 
-
-plt.figure(figsize=(10, 6))
-plt.plot(wavelength, flux, label="Original Spectrum")
-plt.plot(wavelength, continuum, label=f"COntinuum Fit", linestyle="--")
-plt.xlabel("Wavelength (Angstrom)")
-plt.ylabel("Flux")
-plt.legend()
-plt.title("Blackbody Continuum Fit")
-plt.show()
-
-
 def normalize_spectrum(flux, continuum):
     return flux / continuum
     
-
-
-fwhm_results = []
-
-
-# Start with Halpha
-center_wavelength = 6563
 # Fit Gaussian around each target line
 def gaussian(x, amp, mu, sigma):
     return amp * np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
 
-# Create the inverted spectrum for fitting
-inverted_spectrum = 1 - flux
+def calculate_equivalent_width(wavelength, flux):
+    spectral_lines = {  
+                      'Halpha': 6563,                      
+                      'Hbeta': 4861,
+                      }
+    fwhm_results = []
 
-# Initial guess based on the target line center
-idx = (np.abs(wavelength - center_wavelength)).argmin()
-amp_guess = inverted_spectrum[idx]
-sigma_guess = 10  # Initial guess for sigma
-guess = [amp_guess, center_wavelength, sigma_guess]
+    # Create the inverted spectrum for fitting
+    inverted_spectrum = 1 - flux
 
-# Narrow region around the line center for fitting
-mask_halpha = (wavelength > center_wavelength - 200) & (wavelength < center_wavelength + 200)
+    for line_name, center_wavelength in spectral_lines.items():
+        # Initial guess based on the target line center
+        idx = (np.abs(wavelength - center_wavelength)).argmin()
+        amp_guess = inverted_spectrum[idx]
+        sigma_guess = 10  # Initial guess for sigma
+        guess = [amp_guess, center_wavelength, sigma_guess]
 
-# Check if there are enough points to fit
-if np.sum(mask_halpha) < 5:  # Require at least 5 points in the window
-    print(f"Not enough data points to fit Halpha")
-else:   
-    popt, _ = curve_fit(gaussian, wavelength[mask_halpha], inverted_spectrum[mask_halpha], p0=guess)
+        # Narrow region around the line center for fitting
+        mask = (wavelength > center_wavelength - 200) & (wavelength < center_wavelength + 200)
 
-    # Calculate FWHM from the fit sigma
-    amp, mu, sigma = popt
-    fwhm = 2 * np.sqrt(2 * np.log(2)) * np.abs(sigma)
-    fwhm_results.append(('Halpha', mu, fwhm))
+        # Check if there are enough points to fit
+        if np.sum(mask) < 5:  # Require at least 5 points in the window
+            print(f"Not enough data points to fit Halpha")
+        else:   
+            popt, _ = curve_fit(gaussian, wavelength[mask], inverted_spectrum[mask], p0=guess)
 
+            # Calculate FWHM from the fit sigma
+            amp, mu, sigma = popt
+            fwhm = 2 * np.sqrt(2 * np.log(2)) * np.abs(sigma)
+            fwhm_results.append((line_name, mu, fwhm, mask, popt))
+            print('The FWHM of %s line is %s' % (line_name, fwhm))
+    return fwhm_results
 
-# Plot the fitted Gaussian, inverted back to negative values
-plt.plot(wavelength[mask_halpha], 1-gaussian(wavelength[mask_halpha], *popt), linestyle='--', label='Halpha FWHM=%s Å' % fwhm)
-plt.plot(wavelength[mask_halpha], flux[mask_halpha], label='Halpha Spectrum', color='black')
-plt.title("Spectral Lines with Fitted Gaussians")
-
-
-print('The FWHM of Halpha is %.2f Å' % fwhm)
-
-
-# Now do Hbeta
-center_wavelength = 4861
-# Fit Gaussian around each target line
-def gaussian(x, amp, mu, sigma):
-    return amp * np.exp(-(x - mu) ** 2 / (2 * sigma ** 2))
-
-# Create the inverted spectrum for fitting
-inverted_spectrum = 1 - flux
-
-# Initial guess based on the target line center
-idx = (np.abs(wavelength - center_wavelength)).argmin()
-amp_guess = inverted_spectrum[idx]
-sigma_guess = 10  # Initial guess for sigma
-guess = [amp_guess, center_wavelength, sigma_guess]
-
-# Narrow region around the line center for fitting
-mask_hbeta = (wavelength > center_wavelength - 200) & (wavelength < center_wavelength + 200)
-
-# Check if there are enough points to fit
-if np.sum(mask_hbeta) < 5:  # Require at least 5 points in the window
-    print(f"Not enough data points to fit Halpha")
-else:   
-    popt, _ = curve_fit(gaussian, wavelength[mask_hbeta], inverted_spectrum[mask_hbeta], p0=guess)
-
-    # Calculate FWHM from the fit sigma
-    amp, mu, sigma = popt
-    fwhm = 2 * np.sqrt(2 * np.log(2)) * np.abs(sigma)
-    fwhm_results.append(('Hbeta', mu, fwhm))
-
-
-# Plot the fitted Gaussian, inverted back to negative values
-plt.plot(wavelength[mask_hbeta], 1-gaussian(wavelength[mask_hbeta], *popt), linestyle='--', label='Halpha FWHM=%s Å' % fwhm)
-plt.plot(wavelength[mask_hbeta], flux[mask_hbeta], label='Hbeta Spectrum', color='black')
-plt.title("Spectral Lines with Fitted Gaussians")
-
-
-print('The FWHM of Hbeta is %.2f Å' % fwhm)
-
-plt.xlabel("Wavelength (Angstrom)")
-plt.ylabel("Normalized Flux")
-
-plt.legend()
-
-plt.show()
-
+def plot_fwhm(wavelength, flux, fwhm_results):
+    for line_name, mu, fwhm, mask, popt in fwhm_results:
+        # Plot the fitted Gaussian, inverted back to negative values
+        plt.plot(wavelength[mask], 1 - gaussian(wavelength[mask], *popt), linestyle='--', label=f'{line_name} FWHM={fwhm:.2f} Å')
+        plt.plot(wavelength[mask], flux[mask], label=f'{line_name} Spectrum', color='black')
+        plt.title("Spectral Lines with Fitted Gaussians")
+        plt.xlabel("Wavelength (Angstrom)")
+        plt.ylabel("Normalized Flux")
+        plt.legend()
+        plt.show()
+    
 
 

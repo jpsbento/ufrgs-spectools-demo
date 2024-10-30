@@ -17,3 +17,7 @@ plt.title("Blackbody Continuum Fit")
 plt.show()
 
 normalized_flux = normalize_spectrum(flux, continuum)
+
+fwhm_results = calculate_equivalent_width(wavelength, normalized_flux)
+
+plot_fwhm(wavelength, normalized_flux, fwhm_results)
