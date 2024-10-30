@@ -1,10 +1,7 @@
 
 import numpy as np
 import matplotlib.pyplot as plt
-from scipy.constants import h, c, k
 from scipy.optimize import curve_fit
-
-file = 'arcturus.txt'
 
 def load_spectrum(file, max_wavelength=15000):
     
