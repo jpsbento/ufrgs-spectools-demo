@@ -68,6 +68,7 @@ def calculate_equivalent_width(wavelength, flux):
     spectral_lines = {  
                       'Halpha': 6563,                      
                       'Hbeta': 4861,
+                      'Hgamma': 4341,
                       }
     fwhm_results = []
 
@@ -102,11 +103,17 @@ def plot_fwhm(wavelength, flux, fwhm_results):
         # Plot the fitted Gaussian, inverted back to negative values
         plt.plot(wavelength[mask], 1 - gaussian(wavelength[mask], *popt), linestyle='--', label=f'{line_name} FWHM={fwhm:.2f} Å')
         plt.plot(wavelength[mask], flux[mask], label=f'{line_name} Spectrum', color='black')
-        plt.title("Spectral Lines with Fitted Gaussians")
-        plt.xlabel("Wavelength (Angstrom)")
-        plt.ylabel("Normalized Flux")
-        plt.legend()
-        plt.show()
+    plt.title("Spectral Lines with Fitted Gaussians")
+    plt.xlabel("Wavelength (Angstrom)")
+    plt.ylabel("Normalized Flux")
+    plt.legend()
+    plt.show()
     
 
 
+def full_analysis(file):
+    wavelength, flux = load_spectrum(file)
+    continuum = determine_continuum(flux)
+    normalized_flux = normalize_spectrum(flux, continuum)
+    fwhm_results = calculate_equivalent_width(wavelength, normalized_flux)
+    plot_fwhm(wavelength, normalized_flux, fwhm_results)
